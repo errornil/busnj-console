@@ -1,0 +1,27 @@
+---
+pipeline:
+  build:
+    image: golang:1.11
+    environment:
+      - GOPATH=/drone
+    commands:
+      - export PATH=$PATH:$GOPATH/bin
+      - go test ./...
+      - CGO_ENABLED=0 go build -ldflags "-s" -a -installsuffix cgo -o main.bin
+    when:
+      event: push
+      branch: master
+
+  cr:
+    image: docker
+    commands:
+      - docker login --username=$DOCKER_USERNAME --password=$DOCKER_PASSWORD cr.chuhlomin.com
+      - docker build -t cr.chuhlomin.com/busnj-console:latest .
+      - docker push cr.chuhlomin.com/busnj-console:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    privileged: true
+    secrets: [ docker_username, docker_password ]
+    when:
+      event: push
+      branch: master
