@@ -1,0 +1,149 @@
+<style>
+
+body {
+	font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+	font-size: 16px;
+	line-height: 1.5;
+	word-wrap: break-word;
+}
+
+.left {
+	float: left;
+}
+
+.recipets-list table {
+	border-spacing: 0;
+	border-collapse: collapse;
+
+	margin-top: 0;
+	margin-bottom: 16px;
+
+	display: block;
+	width: 100%;
+	overflow: auto;
+}
+
+.recipets-list table th {
+	font-weight: 600;
+}
+
+.recipets-list table th, 
+.recipets-list table td {
+	padding: 6px 13px;
+	border: 1px solid #dfe2e5;
+	vertical-align: top;
+}
+
+.recipets-list table tr:nth-child(2n) {
+	background-color: #f6f8fa;
+}
+
+.recipets-list table tr {
+	background-color: #fff;
+	border-top: 1px solid #c6cbd1;
+}
+
+.recipets-list .min {
+	width: 1%;
+    white-space: nowrap;
+}
+
+.receipt {
+	background: linear-gradient(#f9f9f9, #e3e3e3);
+}
+
+code.original {
+	background: orange;
+}
+
+code.trial {
+	background: #00ccff;
+	color: white;
+}
+
+code.intro {
+	background: #99ff66;
+}
+
+code.green {
+	background: rgb(180, 229, 161);
+	color: black;
+}
+
+code.red {	
+	background: rgb(255, 208, 218);
+	color: black;
+}
+
+code, tt {
+	padding: 0.2em 0.4em;
+	margin: 0;
+	font-size: 85%;
+	background-color: rgba(27,31,35,0.05);
+	border-radius: 3px;
+}
+
+code {
+	font-family: "SFMono-Regular",Consolas,"Liberation Mono",Menlo,Courier,monospace;
+	font-size: 12px;
+}
+
+.mono {
+	font-family: "SFMono-Regular",Consolas,"Liberation Mono",Menlo,Courier,monospace;
+}
+
+</style>
+<body>
+<h1>Receipts</h1>
+<div class="recipets-list">
+<table>
+	<thead>
+		<tr>
+			<th>UUID</th>
+			<th>Env.</th>
+			<th>Status</th>
+			<th>Creation Date</th>
+			<th>Request Date</th>
+			<!-- <th>Bundle / Version</th> -->
+			<th>Receipt Type</th>
+			<th>Pending Renewal Info</th>
+		</tr>
+	</thead>
+	<tbody>
+		{{range .Receipts}}
+		{{if eq .ReceiptResponse.Status 0}}
+		<tr>
+			<td class="min">
+				<a href="/receipts/history/{{.Uuid}}"><code>{{.Uuid}}</code></a>
+				<a href="/receipts/src/{{.Uuid}}.json"><code>json</code></a>
+				{{if eq .HasDebugJson true}}
+				<a href="/receipts/src/{{.Uuid}}_debug.json"><code>debug</code></a>
+				{{end}}
+			</td>
+			<td class="min"><code>{{.ReceiptResponse.Environment}}</code>&nbsp;</td>
+			<td class="min"><code>{{.ReceiptResponse.Status}}</code>&nbsp;</td>
+			<td class="min mono">{{.ReceiptResponse.Receipt.ReceiptCreationDate}}</td>
+			<td class="min mono">{{.ReceiptResponse.Receipt.RequestDate}}</td>
+
+			<!-- <td class="min"><code>{{.ReceiptResponse.Receipt.BundleId}}</code>
+				<code>{{.ReceiptResponse.Receipt.OriginalApplicationVersion}}
+				({{.ReceiptResponse.Receipt.ApplicationVersion}})
+				</code></td> -->
+			<td class="min"><code>{{.ReceiptResponse.Receipt.ReceiptType}}</code>&nbsp;</td>
+			<td>
+				{{range .ReceiptResponse.PendingRenewalInfo}}
+					<code>{{.ProductId}}</code>
+					{{if eq .AutoRenewStatus "1"}}
+					<code class="green">will renew</code>
+					{{else}}
+					<code class="red">turned off</code>
+					{{end}}
+				{{end}}
+			</td>
+		</tr>
+		{{end}}
+		{{end}}
+	</tbody>
+</table>
+</div>
+</body>

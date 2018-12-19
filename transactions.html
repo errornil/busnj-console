@@ -1,0 +1,170 @@
+<style>
+
+body {
+	font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+	font-size: 16px;
+	line-height: 1.5;
+	word-wrap: break-word;
+}
+
+.left {
+	float: left;
+}
+
+.recipets-list table {
+	border-spacing: 0;
+	border-collapse: collapse;
+
+	margin-top: 0;
+	margin-bottom: 16px;
+
+	display: block;
+	width: 100%;
+	overflow: auto;
+}
+
+.recipets-list table th {
+	font-weight: 600;
+}
+
+.recipets-list table th, 
+.recipets-list table td {
+	padding: 6px 13px;
+	border: 1px solid #dfe2e5;
+	vertical-align: top;
+}
+
+.recipets-list table tr:nth-child(2n) {
+	background-color: #f6f8fa;
+}
+
+.recipets-list table tr {
+	background-color: #fff;
+	border-top: 1px solid #c6cbd1;
+}
+
+.recipets-list .min {
+	width: 1%;
+    white-space: nowrap;
+}
+
+.receipt {
+	background: linear-gradient(#f9f9f9, #e3e3e3);
+}
+
+code.original {
+	background: orange;
+}
+
+code.trial {
+	background: #00ccff;
+	color: white;
+}
+
+code.intro {
+	background: #99ff66;
+}
+
+code.green {
+	background: green;
+	color: white;
+}
+
+code.red {	
+	background: red;
+	color: white;
+}
+
+code, tt {
+	padding: 0.2em 0.4em;
+	margin: 0;
+	font-size: 85%;
+	background-color: rgba(27,31,35,0.05);
+	border-radius: 3px;
+}
+
+code {
+	font-family: "SFMono-Regular",Consolas,"Liberation Mono",Menlo,Courier,monospace;
+	font-size: 12px;
+}
+
+</style>
+<body>
+<div class="recipets-list">
+<table>
+	<thead>
+		<tr>
+			<th>Transaction ID</th>
+			<th>Product ID</th>
+			<th>Quantity</th>
+			<th># Receipies with this transaction</th>
+			<th>Purchase Date</th>
+			<th>Expires Date</th>
+			<th>Web Order Line Item Id</th>
+		</tr>
+	</thead>
+	<tbody>
+		{{range .InApp}}
+		{{if eq .TransactionId .OriginalTransactionId}}
+		<tr>
+			<td colspan="7" class="receipt">
+				<code>{{.ReceiptFile.ReceiptResponse.Receipt.BundleId}}</code>
+				<code>
+					{{.ReceiptFile.ReceiptResponse.Receipt.OriginalApplicationVersion}}
+					({{.ReceiptFile.ReceiptResponse.Receipt.ApplicationVersion}})</code>
+				<code>{{.ReceiptFile.ReceiptResponse.Environment}}</code>
+				<code>{{.ReceiptFile.ReceiptResponse.Receipt.ReceiptType}}</code>
+				<code>{{.ReceiptFile.Uuid}}</code>
+				
+				<p>Creation Date: {{.ReceiptFile.ReceiptResponse.Receipt.ReceiptCreationDate}}</p>
+				<p>Request Date: {{.ReceiptFile.ReceiptResponse.Receipt.RequestDate}}</p>
+
+				<p>Pending renewal info:</p>
+				<ul>
+				{{range .ReceiptFile.ReceiptResponse.PendingRenewalInfo}}
+					<li>
+						<code>{{.ProductId}}</code>
+						<code>{{.OriginalTransactionId}}</code>
+						{{if eq .AutoRenewStatus "1"}}
+						<code class="green">will renew</code>
+						{{else}}
+						<code class="red">turned off</code>
+						{{end}}
+					</li>
+				{{end}}
+				</ul>
+			</td>
+		</tr>
+		{{end}}
+
+		<tr>
+			<td class="min">
+				{{if eq .TransactionId .OriginalTransactionId}}
+				<code class="original">{{.TransactionId}}</code>
+				{{else}}
+				<code>{{.TransactionId}}</code>
+				{{end}}
+			</td>
+			<td class="min"><code>{{.ProductId}}</code></td>
+			<td align="right">
+				{{if eq .IsTrialPeriod "true"}}
+				<code class="trial left">trial</code>
+				{{end}}
+				{{if eq .IsInIntroOfferPeriod "true"}}
+				<code class="intro left">intro</code>
+				{{end}}
+
+				{{.Quantity}}
+			</td>
+			<td align="right">
+				{{len .ReceiptUuids}}
+			</td>
+			<td class="min">{{.PurchaseDate}}</td>
+			<td class="min">{{.ExpiresDate}}</td>
+			<td class="min"><code>{{.WebOrderLineItemId}}</code></td>
+		</tr>
+		{{end}}
+	</tbody>
+</table>
+</div>
+</body>
