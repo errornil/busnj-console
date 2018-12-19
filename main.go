@@ -12,14 +12,6 @@ import (
 	"strings"
 )
 
-const (
-	bind = ":8080"
-)
-
-var (
-	receiptsPath = ""
-)
-
 type ReceiptFile struct {
 	Uuid            string
 	RequestDateMs   string
@@ -210,12 +202,6 @@ func Log(handler http.Handler) http.Handler {
 		log.Printf("%s %s %s", r.RemoteAddr, r.Method, r.URL)
 		handler.ServeHTTP(w, r)
 	})
-}
-
-func readReceiptsPath() {
-	receiptsPath = os.Getenv("RECEIPTS_PATH")
-
-	log.Println("Using receipts path:", receiptsPath)
 }
 
 func getListOfFiles() (map[string]bool, map[string]bool, map[string]bool, error) {
@@ -428,12 +414,15 @@ func buildHtmlReceipt(w http.ResponseWriter, data *ReceiptFile) error {
 func main() {
 	log.Println("Starting...")
 
-	readReceiptsPath()
+	port := os.Getenv("PORT")
+	receiptsPath := os.Getenv("PATH_TO_RECEIPTS")
+
+	log.Println("Using receipts path:", receiptsPath)
 
 	http.Handle("/receipts/src/", http.StripPrefix("/receipts/src/", http.FileServer(http.Dir(receiptsPath))))
 	http.HandleFunc("/receipts/history/", handlerHistory)
 	http.HandleFunc("/receipts/transactions/", handlerTransactions)
 
-	log.Println("Listening...")
-	log.Fatal(http.ListenAndServe(bind, Log(http.DefaultServeMux)))
+	log.Printf("Listening on port %s...", port)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), Log(http.DefaultServeMux)))
 }
