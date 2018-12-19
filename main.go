@@ -12,6 +12,8 @@ import (
 	"strings"
 )
 
+var receiptsPath string
+
 type ReceiptFile struct {
 	Uuid            string
 	RequestDateMs   string
@@ -415,7 +417,7 @@ func main() {
 	log.Println("Starting...")
 
 	port := os.Getenv("PORT")
-	receiptsPath := os.Getenv("PATH_TO_RECEIPTS")
+	receiptsPath = os.Getenv("PATH_TO_RECEIPTS")
 
 	log.Println("Using receipts path:", receiptsPath)
 
