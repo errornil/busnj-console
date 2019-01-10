@@ -43,6 +43,9 @@ pipeline:
     mounts:
       - /var/local/receipts/:/receipts:ro
     expose: "6001"
+    secrets:
+      - source: ssh_key
+        target: ssh_key
     when:
       event: push
       branch: master
