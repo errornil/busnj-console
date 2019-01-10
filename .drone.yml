@@ -13,15 +13,36 @@ pipeline:
       branch: master
 
   cr:
-    image: docker
-    commands:
-      - docker login --username=$DOCKER_USERNAME --password=$DOCKER_PASSWORD cr.chuhlomin.com
-      - docker build -t cr.chuhlomin.com/busnj-console:latest .
-      - docker push cr.chuhlomin.com/busnj-console:latest
+    image: plugins/docker
+    registry: cr.chuhlomin.com
+    repo: cr.chuhlomin.com/busnj-console
+    tag:
+      - ${DRONE_COMMIT}
+      - latest
+    username: ${DOCKER_USERNAME}
+    secrets: [ docker_password ]
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    privileged: true
     secrets: [ docker_username, docker_password ]
+    when:
+      event: push
+      branch: master
+
+  deploy:
+    image: cr.chuhlomin.com/do-deploy:latest
+    username: root
+    server: busnj.chuhlomin.com
+    docker_image: cr.chuhlomin.com/busnj-console:${DRONE_COMMIT}
+    docker_network: beta_default
+    docker_network_alias: busnj-console
+    container_name: busnj-console
+    log_driver: syslog
+    envs:
+      PORT: "6001"
+      PATH_TO_RECEIPTS: /receipts/
+    mounts:
+      - /var/local/receipts/:/receipts:ro
+    expose: "6001"
     when:
       event: push
       branch: master
