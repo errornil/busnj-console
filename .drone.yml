@@ -3,8 +3,9 @@ pipeline:
   build:
     image: golang:1.11
     commands:
-      - go test ./...
-      - CGO_ENABLED=0 go build -ldflags "-s" -a -installsuffix cgo -o main.bin
+      - make test
+      - make vet
+      - make build-drone
     when:
       event: push
       branch: master
