@@ -26,7 +26,7 @@ pipeline:
     secrets: [ docker_username, docker_password ]
     when:
       event: push
-      branch: master
+      branch: skip #master
 
   deploy:
     image: cr.chuhlomin.com/do-deploy:latest
@@ -48,4 +48,4 @@ pipeline:
         target: ssh_key
     when:
       event: push
-      branch: master
+      branch: skip #master
