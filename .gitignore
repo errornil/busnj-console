@@ -1,0 +1,3 @@
+secrets
+*.env
+cmd/server/main

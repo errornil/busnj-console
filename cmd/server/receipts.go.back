@@ -4,21 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"http"
 	"io/ioutil"
 	"log"
-	"net/http"
-	"os"
 	"sort"
 	"strings"
 )
-
-var receiptsPath string
 
 type ReceiptFile struct {
 	Uuid            string
 	RequestDateMs   string
 	HasBinary       bool
-	HasDebugJson    bool
+	HasDebugJSON    bool
 	ReceiptResponse ReceiptResponse
 }
 
@@ -115,97 +112,6 @@ type InApp struct {
 	ReceiptFile  ReceiptFile
 }
 
-func failOnError(err error, msg string) {
-	if err != nil {
-		log.Fatalf("%s: %s", msg, err)
-		panic(fmt.Sprintf("%s: %s", msg, err))
-	}
-}
-
-func handlerHistory(w http.ResponseWriter, r *http.Request) {
-	uuid := r.URL.Path[len("/receipts/history/"):]
-	if len(uuid) > 0 {
-		handlerReceipe(uuid, w, r)
-		return
-	}
-
-	js, bs, ds, err := getListOfFiles()
-	if err != nil {
-		handleError(w, r, err, 500, "Failed to load list of files")
-		return
-	}
-
-	receiptFiles := loadFiles(js, bs, ds)
-
-	data := processHistory(receiptFiles)
-
-	err = buildHtmlHistory(w, data)
-	if err != nil {
-		handleError(w, r, err, 500, "Failed to render page")
-		return
-	}
-}
-
-func handlerReceipe(uuid string, w http.ResponseWriter, r *http.Request) {
-	receiptResponse, err := readJsonFile(uuid)
-	if err != nil {
-		handleError(w, r, err, 500, fmt.Sprintf("Failed to read JSON file %s.json", uuid))
-		return
-	}
-
-	sort.Sort(byTransactionId(receiptResponse.Receipt.InApp))
-
-	receiptFile := &ReceiptFile{
-		Uuid:            uuid,
-		RequestDateMs:   receiptResponse.Receipt.RequestDateMs,
-		ReceiptResponse: receiptResponse,
-	}
-
-	err = buildHtmlReceipt(w, receiptFile)
-	if err != nil {
-		handleError(w, r, err, 500, "Failed to render page")
-		return
-	}
-}
-
-func handlerTransactions(w http.ResponseWriter, r *http.Request) {
-	js, bs, ds, err := getListOfFiles()
-	if err != nil {
-		handleError(w, r, err, 500, "Failed to load list of files")
-		return
-	}
-
-	receiptFiles := loadFiles(js, bs, ds)
-
-	data := processTransactions(receiptFiles)
-
-	err = buildHtmlTransactions(w, data)
-	if err != nil {
-		handleError(w, r, err, 500, "Failed to render page")
-		return
-	}
-}
-
-func handleError(w http.ResponseWriter, r *http.Request, err error, code int, message string) {
-	if err != nil {
-		message = fmt.Sprintf("%s: %s", message, err)
-	}
-
-	log.Printf("%s %s %s %d %s: %v", r.RemoteAddr, r.Method, r.URL, code, message, err)
-
-	errorBytes := []byte("test")
-
-	w.WriteHeader(code)
-	fmt.Fprintf(w, "%s", errorBytes)
-}
-
-func Log(handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %s %s", r.RemoteAddr, r.Method, r.URL)
-		handler.ServeHTTP(w, r)
-	})
-}
-
 func getListOfFiles() (map[string]bool, map[string]bool, map[string]bool, error) {
 	bs := map[string]bool{}
 	js := map[string]bool{}
@@ -240,10 +146,10 @@ func getListOfFiles() (map[string]bool, map[string]bool, map[string]bool, error)
 	return js, bs, ds, nil
 }
 
-func loadFiles(jsonFiles map[string]bool, base64Files map[string]bool, debugJson map[string]bool) map[string]*ReceiptFile {
+func loadFiles(jsonFiles map[string]bool, base64Files map[string]bool, debugJSON map[string]bool) map[string]*ReceiptFile {
 	result := map[string]*ReceiptFile{}
 
-	for uuid, _ := range jsonFiles {
+	for uuid := range jsonFiles {
 		receiptResponse, err := readJsonFile(uuid)
 		if err != nil {
 			log.Printf("Failed to read JSON file %s.json: %v", uuid, err)
@@ -255,16 +161,16 @@ func loadFiles(jsonFiles map[string]bool, base64Files map[string]bool, debugJson
 			hasBinary = true
 		}
 
-		hasDebugJson := false
-		if _, ok := debugJson[uuid]; ok {
-			hasDebugJson = true
+		hasDebugJSON := false
+		if _, ok := debugJSON[uuid]; ok {
+			hasDebugJSON = true
 		}
 
 		result[uuid] = &ReceiptFile{
 			Uuid:            uuid,
 			RequestDateMs:   receiptResponse.Receipt.RequestDateMs,
 			HasBinary:       hasBinary,
-			HasDebugJson:    hasDebugJson,
+			HasDebugJSON:    hasDebugJSON,
 			ReceiptResponse: receiptResponse,
 		}
 	}
@@ -333,7 +239,7 @@ func processHistory(receiptFiles map[string]*ReceiptFile) *TemplateDataHistory {
 				Uuid:            uuid,
 				RequestDateMs:   receiptFile.RequestDateMs,
 				HasBinary:       receiptFile.HasBinary,
-				HasDebugJson:    receiptFile.HasDebugJson,
+				HasDebugJSOM:    receiptFile.HasDebugJSON,
 				ReceiptResponse: receiptFile.ReceiptResponse,
 			},
 		)
@@ -413,18 +319,66 @@ func buildHtmlReceipt(w http.ResponseWriter, data *ReceiptFile) error {
 	return nil
 }
 
-func main() {
-	log.Println("Starting...")
+func handlerHistory(w http.ResponseWriter, r *http.Request) {
+	uuid := r.URL.Path[len("/receipts/history/"):]
+	if len(uuid) > 0 {
+		handlerReceipe(uuid, w, r)
+		return
+	}
 
-	port := os.Getenv("PORT")
-	receiptsPath = os.Getenv("PATH_TO_RECEIPTS")
+	js, bs, ds, err := getListOfFiles()
+	if err != nil {
+		handleError(w, r, err, 500, "Failed to load list of files")
+		return
+	}
 
-	log.Println("Using receipts path:", receiptsPath)
+	receiptFiles := loadFiles(js, bs, ds)
 
-	http.Handle("/receipts/src/", http.StripPrefix("/receipts/src/", http.FileServer(http.Dir(receiptsPath))))
-	http.HandleFunc("/receipts/history/", handlerHistory)
-	http.HandleFunc("/receipts/transactions/", handlerTransactions)
+	data := processHistory(receiptFiles)
 
-	log.Printf("Listening on port %s...", port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), Log(http.DefaultServeMux)))
+	err = buildHtmlHistory(w, data)
+	if err != nil {
+		handleError(w, r, err, 500, "Failed to render page")
+		return
+	}
+}
+
+func handlerReceipe(uuid string, w http.ResponseWriter, r *http.Request) {
+	receiptResponse, err := readJsonFile(uuid)
+	if err != nil {
+		handleError(w, r, err, 500, fmt.Sprintf("Failed to read JSON file %s.json", uuid))
+		return
+	}
+
+	sort.Sort(byTransactionId(receiptResponse.Receipt.InApp))
+
+	receiptFile := &ReceiptFile{
+		Uuid:            uuid,
+		RequestDateMs:   receiptResponse.Receipt.RequestDateMs,
+		ReceiptResponse: receiptResponse,
+	}
+
+	err = buildHtmlReceipt(w, receiptFile)
+	if err != nil {
+		handleError(w, r, err, 500, "Failed to render page")
+		return
+	}
+}
+
+func handlerTransactions(w http.ResponseWriter, r *http.Request) {
+	js, bs, ds, err := getListOfFiles()
+	if err != nil {
+		handleError(w, r, err, 500, "Failed to load list of files")
+		return
+	}
+
+	receiptFiles := loadFiles(js, bs, ds)
+
+	data := processTransactions(receiptFiles)
+
+	err = buildHtmlTransactions(w, data)
+	if err != nil {
+		handleError(w, r, err, 500, "Failed to render page")
+		return
+	}
 }

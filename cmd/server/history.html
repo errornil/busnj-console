@@ -116,7 +116,7 @@ code {
 			<td class="min">
 				<a href="/receipts/history/{{.Uuid}}"><code>{{.Uuid}}</code></a>
 				<a href="/receipts/src/{{.Uuid}}.json"><code>json</code></a>
-				{{if eq .HasDebugJson true}}
+				{{if eq .HasDebugJSOM true}}
 				<a href="/receipts/src/{{.Uuid}}_debug.json"><code>debug</code></a>
 				{{end}}
 			</td>
