@@ -2,10 +2,7 @@
 pipeline:
   build:
     image: golang:1.11
-    environment:
-      - GOPATH=/drone
     commands:
-      - export PATH=$PATH:$GOPATH/bin
       - go test ./...
       - CGO_ENABLED=0 go build -ldflags "-s" -a -installsuffix cgo -o main.bin
     when:
