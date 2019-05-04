@@ -10,14 +10,11 @@ import (
 
 	"github.com/chuhlomin/busnj-console/applemaps"
 	njt "github.com/chuhlomin/njtransit"
-
-	"github.com/gorilla/websocket"
 )
 
 var (
 	frontendURL url.URL
 	proxy       *httputil.ReverseProxy
-	upgrader    = websocket.Upgrader{}
 	busData     *njt.BusDataClient
 	maps        *applemaps.TokenGenerator
 	// receiptsPath string
@@ -81,6 +78,8 @@ func main() {
 	maps, err = applemaps.NewTokenGenerator(
 		os.Getenv("MAPS_PATH_TO_KEY"),
 		os.Getenv("MAPS_KEY_ID"),
+		os.Getenv("MAPS_TEAM_ID"),
+		os.Getenv("MAPS_ORIGIN"),
 	)
 	check(err, "Failed to create Apple Maps client")
 
@@ -91,7 +90,12 @@ func main() {
 	// http.HandleFunc("/receipts/history/", handlerHistory)
 	// http.HandleFunc("/receipts/transactions/", handlerTransactions)
 
-	http.HandleFunc("/busVehicleDataStream", busVehicleDataStream)
+	hub := newHub()
+	go hub.run()
+
+	http.HandleFunc("/busVehicleDataStream", func(w http.ResponseWriter, r *http.Request) {
+		busVehicleDataStream(hub, w, r)
+	})
 	http.HandleFunc("/gettoken", getToken)
 	http.HandleFunc("/", handlerRroxy)
 

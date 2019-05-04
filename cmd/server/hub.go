@@ -4,12 +4,27 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"strings"
 	"time"
 
 	njt "github.com/chuhlomin/njtransit"
 )
+
+// Hub maintains the set of active clients and broadcasts messages to the
+// clients.
+type Hub struct {
+	// Registered clients.
+	clients map[*Client]bool
+
+	// Inbound messages from the clients.
+	broadcast chan []byte
+
+	// Register requests from the clients.
+	register chan *Client
+
+	// Unregister requests from clients.
+	unregister chan *Client
+}
 
 type busVehicleDataMessage struct {
 	VehicleID            string `json:"vehicleID"`
@@ -26,27 +41,29 @@ type busVehicleDataMessage struct {
 	// Timepoints           []BusVehicleDataRowTimepoint `json:"timepoints"`
 }
 
-func busVehicleDataStream(w http.ResponseWriter, r *http.Request) {
-	c, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Print("upgrade:", err)
-		return
+func newHub() *Hub {
+	return &Hub{
+		broadcast:  make(chan []byte),
+		register:   make(chan *Client),
+		unregister: make(chan *Client),
+		clients:    make(map[*Client]bool),
 	}
-	defer c.Close()
+}
 
-	mt, message, err := c.ReadMessage()
-	if err != nil {
-		log.Println("read error:", err)
-		return
-	}
-	log.Printf("← %s", message)
-
+func (h *Hub) run() {
 	rc := make(chan njt.BusVehicleDataRow)
 	ec := make(chan error)
 	go busData.GetBusVehicleDataStream(rc, ec, 5*time.Second, true)
 
 	for {
 		select {
+		case client := <-h.register:
+			h.clients[client] = true
+		case client := <-h.unregister:
+			if _, ok := h.clients[client]; ok {
+				delete(h.clients, client)
+				close(client.send)
+			}
 		case row := <-rc:
 			message := busVehicleDataMessage{
 				VehicleID:            row.VehicleID,
@@ -65,15 +82,15 @@ func busVehicleDataStream(w http.ResponseWriter, r *http.Request) {
 			response, err := json.Marshal(message)
 			if err != nil {
 				log.Printf("Failed to marshal BusVehicleDataMessage: %v", err)
-				return
+				continue
 			}
 
-			err = c.WriteMessage(mt, response)
-			if err != nil {
-				log.Printf("Failed to write message: %v", err)
-				return
+			for client := range h.clients {
+				log.Println("Broadcasting message")
+				client.send <- response
+				// close(client.send)
+				// delete(h.clients, client)
 			}
-			log.Printf("→ %s", string(response))
 
 		case err := <-ec: // errors in the library
 			fmt.Println(err)
