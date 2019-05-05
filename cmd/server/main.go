@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -59,6 +60,16 @@ func handlerRroxy(w http.ResponseWriter, r *http.Request) {
 	proxy.ServeHTTP(w, req)
 }
 
+func busVehicleData(hub *Hub, w http.ResponseWriter, r *http.Request) {
+	data := hub.getBusVehicleData()
+	response, err := json.Marshal(data)
+	if err != nil {
+		log.Printf("Failed to marshal hub.getBusVehicleData result: %v", err)
+		return
+	}
+	w.Write(response)
+}
+
 func main() {
 	log.Println("Starting...")
 
@@ -95,6 +106,9 @@ func main() {
 
 	http.HandleFunc("/busVehicleDataStream", func(w http.ResponseWriter, r *http.Request) {
 		busVehicleDataStream(hub, w, r)
+	})
+	http.HandleFunc("/busVehicleData", func(w http.ResponseWriter, r *http.Request) {
+		busVehicleData(hub, w, r)
 	})
 	http.HandleFunc("/gettoken", getToken)
 	http.HandleFunc("/", handlerRroxy)

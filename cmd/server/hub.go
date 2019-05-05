@@ -24,6 +24,9 @@ type Hub struct {
 
 	// Unregister requests from clients.
 	unregister chan *Client
+
+	// Stores all busVehicleDataMessage by VehicleID GetBusVehicleData
+	busVehicleDataStore map[string]busVehicleDataMessage
 }
 
 type busVehicleDataMessage struct {
@@ -43,10 +46,11 @@ type busVehicleDataMessage struct {
 
 func newHub() *Hub {
 	return &Hub{
-		broadcast:  make(chan []byte),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-		clients:    make(map[*Client]bool),
+		broadcast:           make(chan []byte),
+		register:            make(chan *Client),
+		unregister:          make(chan *Client),
+		clients:             make(map[*Client]bool),
+		busVehicleDataStore: map[string]busVehicleDataMessage{},
 	}
 }
 
@@ -79,6 +83,8 @@ func (h *Hub) run() {
 				AsInternalTripNumber: row.AsInternalTripNumber,
 			}
 
+			h.busVehicleDataStore[row.VehicleID] = message
+
 			response, err := json.Marshal(message)
 			if err != nil {
 				log.Printf("Failed to marshal BusVehicleDataMessage: %v", err)
@@ -86,14 +92,16 @@ func (h *Hub) run() {
 			}
 
 			for client := range h.clients {
-				log.Println("Broadcasting message")
 				client.send <- response
-				// close(client.send)
-				// delete(h.clients, client)
 			}
 
 		case err := <-ec: // errors in the library
 			fmt.Println(err)
 		}
 	}
+}
+
+// GetBusVehicleData returns all known Vehicles at app managed to get since start
+func (h *Hub) getBusVehicleData() map[string]busVehicleDataMessage {
+	return h.busVehicleDataStore
 }
