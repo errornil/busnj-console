@@ -12,6 +12,8 @@ pipeline:
 
   cr:
     image: plugins/docker
+    context: ./cmd/server
+    dockerfile: cmd/server/Dockerfile
     registry: cr.chuhlomin.com
     repo: cr.chuhlomin.com/busnj-console
     tag:
