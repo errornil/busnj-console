@@ -1,9 +1,5 @@
 FROM scratch
 
-ADD transactions.html /transactions.html
-ADD history.html /history.html
-ADD receipt.html /receipt.html
+ADD server /server
 
-ADD main.bin /main.bin
-
-CMD ["/main.bin"]
+CMD ["/server"]
