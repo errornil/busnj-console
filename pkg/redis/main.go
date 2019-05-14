@@ -55,7 +55,7 @@ func (c *Client) LoadBusVehicleDataMessages() ([]*BusVehicleDataMessage, error) 
 	for _, key := range keys {
 		busVehicleData, err := c.loadBusVehicleData(key)
 		if err != nil {
-			log.Println("Failed to load BusVehicleData by key: %s, err: %v", key, err)
+			log.Printf("Failed to load BusVehicleData by key: %s, err: %v", key, err)
 			continue
 		}
 
