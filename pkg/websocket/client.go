@@ -40,7 +40,10 @@ type Client struct {
 }
 
 // NewClient creates new Client
-func NewClient(hub *Hub, w http.ResponseWriter, r *http.Request) (*Client, error) {
+func NewClient(hub *Hub, w http.ResponseWriter, r *http.Request, allowLocalhost bool) (*Client, error) {
+	if allowLocalhost {
+		upgrader.CheckOrigin = checkOriginAllowLocalhost
+	}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return nil, err
@@ -122,4 +125,8 @@ func (c *Client) WritePump() {
 			}
 		}
 	}
+}
+
+func checkOriginAllowLocalhost(r *http.Request) bool {
+	return r.Header.Get("Origin") == "http://localhost:4500"
 }

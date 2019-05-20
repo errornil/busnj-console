@@ -10,7 +10,7 @@ import (
 	"github.com/chuhlomin/busnj-console/pkg/redis"
 	"github.com/chuhlomin/busnj-console/pkg/websocket"
 
-	"github.com/caarlos0/env"
+	"github.com/caarlos0/env/v6"
 )
 
 type config struct {
@@ -19,6 +19,7 @@ type config struct {
 	RedisNetwork    string `env:"REDIS_NETWORK" envDefault:"tcp"`
 	RedisAddr       string `env:"REDIS_ADDR" envDefault:"redis:6379"`
 	RedisSize       int    `env:"REDIS_SIZE" envDefault:"10"`
+	AllowLocalhost  bool   `env:"ALLOW_LOCALHOST" envDefault:"false"`
 }
 
 func check(err error, msg string) {
@@ -31,6 +32,20 @@ func check(err error, msg string) {
 func logMiddleware(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%s %s %s", r.RemoteAddr, r.Method, r.URL)
+		handler.ServeHTTP(w, r)
+	})
+}
+
+func corsMiddleware(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Access-Control-Allow-Origin", "http://localhost:4500")
+		w.Header().Add("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Methods")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		handler.ServeHTTP(w, r)
 	})
 }
@@ -69,8 +84,8 @@ func handlerBusVehicleData(redis *redis.Client, w http.ResponseWriter, r *http.R
 }
 
 // handlerBusVehicleDataStream handles websocket requests from the peer.
-func handlerBusVehicleDataStream(hub *websocket.Hub, w http.ResponseWriter, r *http.Request) {
-	client, err := websocket.NewClient(hub, w, r)
+func handlerBusVehicleDataStream(hub *websocket.Hub, w http.ResponseWriter, r *http.Request, allowLocalhost bool) {
+	client, err := websocket.NewClient(hub, w, r, allowLocalhost)
 	if err != nil {
 		log.Printf("Failed to create WebSocket client: %v", err)
 		return
@@ -106,7 +121,7 @@ func main() {
 	go redis.ConsumeBusVehicleDataChannel(hub)
 
 	http.HandleFunc("/busVehicleDataStream", func(w http.ResponseWriter, r *http.Request) {
-		handlerBusVehicleDataStream(hub, w, r)
+		handlerBusVehicleDataStream(hub, w, r, c.AllowLocalhost)
 	})
 	http.HandleFunc("/busVehicleData", func(w http.ResponseWriter, r *http.Request) {
 		handlerBusVehicleData(redis, w, r)
@@ -115,6 +130,11 @@ func main() {
 		handlerRroxy(proxy, w, r)
 	})
 
+	handler := logMiddleware(http.DefaultServeMux)
+	if c.AllowLocalhost {
+		handler = corsMiddleware(handler)
+	}
+
 	log.Printf("Listening on port %s...", port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), logMiddleware(http.DefaultServeMux)))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), handler))
 }

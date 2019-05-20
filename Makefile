@@ -25,3 +25,11 @@ run-docker:
 		--network busnj-network \
 		-p 6001:6001 \
 		busnj-console:latest;
+
+run-docker-allow-localhost:
+	@docker run --name busnj-console \
+		--rm \
+		--network busnj-network \
+		--env ALLOW_LOCALHOST=true \
+		-p 6001:6001 \
+		busnj-console:latest;
