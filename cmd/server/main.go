@@ -102,6 +102,7 @@ func main() {
 
 	c := config{}
 	err := env.Parse(&c)
+	check(err, "Failed to parse environment variables")
 
 	port := c.Port
 

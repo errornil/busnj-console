@@ -4,7 +4,7 @@ build:
 
 build-drone:
 	@cd ./cmd/server; \
-	CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o server .
+	CGO_ENABLED=0 GOOS=linux go build -mod=readonly -a -installsuffix cgo -o server .
 
 run:
 	@cd ./cmd/server; \
