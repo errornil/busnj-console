@@ -1,7 +1,7 @@
 ---
 pipeline:
   build:
-    image: golang:1.13
+    image: golang:1.12
     commands:
       - make test
       - make vet
