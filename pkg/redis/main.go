@@ -2,6 +2,7 @@ package redis
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/chuhlomin/busnj-console/pkg/websocket"
@@ -10,7 +11,8 @@ import (
 )
 
 const (
-	busVehicleDataChannel = "busVehicleDataChannel"
+	busVehicleDataChannel   = "busVehicleDataChannel"
+	busVehicleDataKeyPrefix = "busVehicleData:"
 )
 
 // Client represents layer between writer and Redis
@@ -45,7 +47,7 @@ func NewClient(network string, addr string, size int) (*Client, error) {
 func (c *Client) LoadBusVehicleDataMessages() ([]*BusVehicleDataMessage, error) {
 	var keys []string
 	err := c.pool.Do(
-		radix.Cmd(&keys, "KEYS", "busVehicleData:*"),
+		radix.Cmd(&keys, "KEYS", busVehicleDataKeyPrefix+"*"),
 	)
 	if err != nil {
 		return nil, err
@@ -80,6 +82,12 @@ func (c *Client) ConsumeBusVehicleDataChannel(hub *websocket.Hub) {
 			hub.Broadcast <- msg.Message
 		}
 	}
+}
+
+func (c *Client) GetBusVehicleDataByVehicleID(vehicleID int) (*BusVehicleDataMessage, error) {
+	return loadBusVehicleData(
+		fmt.Sprintf("%s%d", busVehicleDataKeyPrefix, vehicleID),
+	)
 }
 
 func (c *Client) loadBusVehicleData(key string) (*BusVehicleDataMessage, error) {

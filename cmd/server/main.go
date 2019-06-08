@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/chuhlomin/busnj-console/pkg/postgres"
 	"github.com/chuhlomin/busnj-console/pkg/proxy"
 	"github.com/chuhlomin/busnj-console/pkg/redis"
 	"github.com/chuhlomin/busnj-console/pkg/websocket"
@@ -68,7 +69,7 @@ func handlerRroxy(proxy *proxy.Client, w http.ResponseWriter, r *http.Request) {
 }
 
 // handlerBusVehicleData returns list of known bus vehicles
-func handlerBusVehicleData(redis *redis.Client, w http.ResponseWriter, r *http.Request) {
+func handlerBusVehicleData(w http.ResponseWriter, r *http.Request, redis *redis.Client) {
 	data, err := redis.LoadBusVehicleDataMessages()
 	if err != nil {
 		log.Printf("Failed to load BusVehicleDataMessages: %v", err)
@@ -84,7 +85,12 @@ func handlerBusVehicleData(redis *redis.Client, w http.ResponseWriter, r *http.R
 }
 
 // handlerBusVehicleDataStream handles websocket requests from the peer.
-func handlerBusVehicleDataStream(hub *websocket.Hub, w http.ResponseWriter, r *http.Request, allowLocalhost bool) {
+func handlerBusVehicleDataStream(
+	w http.ResponseWriter,
+	r *http.Request,
+	hub *websocket.Hub,
+	allowLocalhost bool,
+) {
 	client, err := websocket.NewClient(hub, w, r, allowLocalhost)
 	if err != nil {
 		log.Printf("Failed to create WebSocket client: %v", err)
@@ -95,6 +101,34 @@ func handlerBusVehicleDataStream(hub *websocket.Hub, w http.ResponseWriter, r *h
 
 	go client.WritePump()
 	go client.ReadPump()
+}
+
+func handlerGetTrip(
+	w http.ResponseWriter,
+	r *http.Request,
+	rdb *redis.Client,
+	pdb *postgres.Client,
+) {
+	vehicleID := r.URL.Query().Get("vehicleID")
+	if vehicleID == "" {
+		log.Println("Missing vehicleID GET parameter")
+		return
+	}
+
+	rdb.GetBusVehicleData()
+
+	data, err := pdb.GetTripByBlockIDAndHeadsign(blockID, headsign)
+	if err != nil {
+		log.Printf("Failed to get GetTripByBlockIDAndHeadsign: %v", err)
+		return
+	}
+
+	response, err := json.Marshal(data)
+	if err != nil {
+		log.Printf("Failed to marshal BusVehicleData result: %v", err)
+		return
+	}
+	w.Write(response)
 }
 
 func main() {
@@ -116,16 +150,22 @@ func main() {
 	)
 	check(err, "Failed to create Redis client")
 
+	postgres, err := postgres.NewClient()
+	check(err, "Failed to create Postgres client")
+
 	hub := websocket.NewHub()
 	go hub.Run()
 
 	go redis.ConsumeBusVehicleDataChannel(hub)
 
 	http.HandleFunc("/busVehicleDataStream", func(w http.ResponseWriter, r *http.Request) {
-		handlerBusVehicleDataStream(hub, w, r, c.AllowLocalhost)
+		handlerBusVehicleDataStream(w, r, hub, c.AllowLocalhost)
 	})
 	http.HandleFunc("/busVehicleData", func(w http.ResponseWriter, r *http.Request) {
-		handlerBusVehicleData(redis, w, r)
+		handlerBusVehicleData(w, r, redis)
+	})
+	http.HandleFunc("/getTrip", func(w http.ResponseWriter, r *http.Request) {
+		handlerGetTrip(w, r, redis, postgres)
 	})
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		handlerRroxy(proxy, w, r)
