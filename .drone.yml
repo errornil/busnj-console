@@ -1,46 +1,67 @@
 ---
-pipeline:
-  build:
-    image: golang:1.12
-    commands:
-      - make test
-      - make vet
-      - make build-drone
-    when:
-      event: push
-      branch: master
+kind: pipeline
+type: docker
+name: default
 
-  cr:
-    image: plugins/docker
-    context: ./cmd/server
-    dockerfile: cmd/server/Dockerfile
+steps:
+- name: build
+  pull: if-not-exists
+  image: golang:1.12
+  commands:
+  - make test
+  - make vet
+  - make build-drone
+  when:
+    branch:
+    - master
+    event:
+    - push
+
+- name: cr
+  pull: if-not-exists
+  image: plugins/docker
+  settings:
     registry: cr.chuhlomin.com
     repo: cr.chuhlomin.com/busnj-console
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+    context: ./cmd/server
+    dockerfile: cmd/server/Dockerfile
     tag:
-      - ${DRONE_COMMIT}
-      - latest
-    username: ${DOCKER_USERNAME}
-    secrets: [ docker_password ]
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    secrets: [ docker_username, docker_password ]
-    when:
-      event: push
-      branch: master
+    - ${DRONE_COMMIT}
+    - latest
+  when:
+    branch:
+    - master
+    event:
+    - push
 
-  deploy:
-    image: cr.chuhlomin.com/docker-run:latest
-    username: root
+- name: deploy
+  pull: if-not-exists
+  image: cr.chuhlomin.com/docker-run:latest
+  settings:
     server: busnj.chuhlomin.com
+    username: drone
     docker_image: cr.chuhlomin.com/busnj-console:${DRONE_COMMIT}
     docker_network: beta_default
     docker_network_alias: busnj-console
     container_name: busnj-console
+    expose: 6001
     log_driver: syslog
-    expose: "6001"
-    secrets:
-      - source: ssh_key
-        target: ssh_key
-    when:
-      event: push
-      branch: master
+  environment:
+    SSH_KEY:
+      from_secret: ssh_key
+  when:
+    branch:
+    - master
+    event:
+    - push
+
+trigger:
+  branch:
+  - master
+
+image_pull_secrets:
+  - dockerconfigjson
