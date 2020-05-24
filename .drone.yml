@@ -58,3 +58,10 @@ steps:
     - master
     event:
     - push
+
+trigger:
+  branch:
+  - master
+
+image_pull_secrets:
+  - dockerconfigjson
