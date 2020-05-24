@@ -5,7 +5,7 @@ Server for [BusNJ Console](https://console.busnj.chuhlomin.com).
 # Quickstart
 
 ```
-$ make build-drone build-docker run-docker-allow-localhost
+$ make build-static build-docker run-docker
 Sending build context to Docker daemon  7.504MB
 Step 1/3 : FROM scratch
  ---> 
