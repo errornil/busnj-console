@@ -44,6 +44,7 @@ steps:
   settings:
     server: beta.chuhlomin.com
     username: drone
+    sudo: true
     docker_image: cr.chuhlomin.com/busnj-console:${DRONE_COMMIT}
     docker_network: beta_default
     docker_network_alias: busnj-console
