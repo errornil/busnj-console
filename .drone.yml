@@ -42,7 +42,7 @@ steps:
   pull: if-not-exists
   image: cr.chuhlomin.com/docker-run:latest
   settings:
-    server: busnj.chuhlomin.com
+    server: beta.chuhlomin.com
     username: drone
     docker_image: cr.chuhlomin.com/busnj-console:${DRONE_COMMIT}
     docker_network: beta_default
