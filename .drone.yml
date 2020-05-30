@@ -43,8 +43,8 @@ steps:
         - push
 
   - name: deploy
-    pull: if-not-exists
     image: cr.chuhlomin.com/docker-run:latest
+    pull: if-not-exists
     settings:
       server: delta.chuhlomin.com
       username: drone
@@ -52,9 +52,10 @@ steps:
       docker_image: cr.chuhlomin.com/busnj-console:${DRONE_COMMIT}
       docker_network: delta_default
       docker_network_alias: busnj-console
-      container_name: busnj-console
       expose: 6001
-      log_driver: syslog
+      log_driver: loki
+      log_opt:
+        loki-url: http://127.0.0.1:3100/api/prom/push
     environment:
       SSH_KEY:
         from_secret: ssh_key
