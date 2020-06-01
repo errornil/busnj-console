@@ -1,5 +1,7 @@
 # busnj-console
 
+[![Build Status](https://ci.chuhlomin.com/api/badges/errornil/busnj-console/status.svg)](https://ci.chuhlomin.com/errornil/busnj-console)
+
 Server for [BusNJ Console](https://console.busnj.chuhlomin.com).
 
 # Quickstart
