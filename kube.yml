@@ -22,7 +22,7 @@ spec:
             - containerPort: 80
           env:
             - name: PORT
-              value: 80
+              value: "80"
             - name: FRONTEND_ADDRESS
               value: {{ .frontend_address }}
             - name: REDIS_ADDR
