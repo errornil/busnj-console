@@ -2,7 +2,7 @@ build:
 	@cd ./cmd/server; \
 	go build .
 
-build-drone:
+build-static:
 	@cd ./cmd/server; \
 	CGO_ENABLED=0 GOOS=linux go build -mod=readonly -a -installsuffix cgo -o server .
 
