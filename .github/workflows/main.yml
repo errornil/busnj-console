@@ -44,7 +44,7 @@ jobs:
           location: us-east4-c
           vars: |
             image: ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
-            app: ${{ env.DEPLOYMENT_NAME }}
+            app: busnj-console
             replicas: 1
             domain: console.busnj.chuhlomin.com
             frontend_address: http://busnj-console-ui/
