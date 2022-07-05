@@ -1,23 +1,20 @@
 build:
-	@cd ./cmd/server; \
-	go build .
+	@go build .
 
 build-static:
-	@cd ./cmd/server; \
-	CGO_ENABLED=0 GOOS=linux go build -mod=readonly -a -installsuffix cgo -o server .
+	@CGO_ENABLED=0 GOOS=linux go build -mod=readonly -a -installsuffix cgo -o server .
 
 run:
-	@cd ./cmd/server; \
-	go run .
+	@go run .
 
 vet:
-	@go vet ./cmd/...
+	@go vet ./...
 
 test: # vet
 	@go test ./...
 
 build-docker:
-	@docker build --tag busnj-console:latest ./cmd/server;
+	@docker build --tag busnj-console:latest .;
 
 run-docker:
 	@docker run --name busnj-console \
